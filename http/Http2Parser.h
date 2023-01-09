@@ -5,7 +5,7 @@
 #include "HttpParser.h"
 #include "http2def.h"
 #include "grpcdef.h"
-
+using ssize_t = std::make_signed_t<size_t>;
 #include "nghttp2/nghttp2.h"
 
 enum http2_session_state {
