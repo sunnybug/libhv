@@ -1,3 +1,9 @@
+/*
+ * @Date: 2023-01-09
+ * @Description: 
+ * @LastEditTime: 2023-01-09
+ * @LastEditors: xushuwei
+ */
 #ifndef HV_HTTP2_PARSER_H_
 #define HV_HTTP2_PARSER_H_
 
@@ -5,7 +11,7 @@
 #include "HttpParser.h"
 #include "http2def.h"
 #include "grpcdef.h"
-using ssize_t = std::make_signed_t<size_t>;
+using ssize_t = std::make_signed<size_t>;
 #include "nghttp2/nghttp2.h"
 
 enum http2_session_state {
