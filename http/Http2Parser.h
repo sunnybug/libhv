@@ -12,7 +12,7 @@
 #include "http2def.h"
 #include "grpcdef.h"
 #ifndef __ssize_t_defined
-using ssize_t = std::make_signed<size_t>;
+using ssize_t = long long;
 #endif//__ssize_t_defined
 #include "nghttp2/nghttp2.h"
 
