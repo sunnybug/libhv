@@ -170,7 +170,8 @@ static void nio_accept(hio_t* io) {
 
 accept_error:
     hloge("listenfd=%d accept error: %s:%d", io->fd, socket_strerror(io->error), io->error);
-    hio_close(io);
+    // NOTE: Don't close listen fd automatically anyway.
+    // hio_close(io);
 }
 
 static void nio_connect(hio_t* io) {
@@ -250,11 +251,7 @@ static int __nio_read(hio_t* io, void* buf, int len) {
         nread = hssl_read(io->ssl, buf, len);
         break;
     case HIO_TYPE_TCP:
-#ifdef OS_UNIX
-        nread = read(io->fd, buf, len);
-#else
         nread = recv(io->fd, buf, len, 0);
-#endif
         break;
     case HIO_TYPE_UDP:
     case HIO_TYPE_KCP:
@@ -279,11 +276,13 @@ static int __nio_write(hio_t* io, const void* buf, int len) {
         nwrite = hssl_write(io->ssl, buf, len);
         break;
     case HIO_TYPE_TCP:
-#ifdef OS_UNIX
-        nwrite = write(io->fd, buf, len);
-#else
-        nwrite = send(io->fd, buf, len, 0);
+    {
+        int flag = 0;
+#ifdef MSG_NOSIGNAL
+        flag |= MSG_NOSIGNAL;
 #endif
+        nwrite = send(io->fd, buf, len, flag);
+    }
         break;
     case HIO_TYPE_UDP:
     case HIO_TYPE_KCP:
@@ -314,7 +313,7 @@ read:
     // printd("read retval=%d\n", nread);
     if (nread < 0) {
         err = socket_errno();
-        if (err == EAGAIN) {
+        if (err == EAGAIN || err == EINTR) {
             // goto read_done;
             return;
         } else if (err == EMSGSIZE) {
@@ -328,6 +327,10 @@ read:
     }
     if (nread == 0) {
         goto disconnect;
+    }
+    if (nread < len) {
+        // NOTE: make string friendly
+        ((char*)buf)[nread] = '\0';
     }
     io->readbuf.tail += nread;
     __read_cb(io, buf, nread);
@@ -367,7 +370,7 @@ write:
     // printd("write retval=%d\n", nwrite);
     if (nwrite < 0) {
         err = socket_errno();
-        if (err == EAGAIN) {
+        if (err == EAGAIN || err == EINTR) {
             hrecursive_mutex_unlock(&io->write_mutex);
             return;
         } else {
@@ -497,7 +500,7 @@ try_write:
         // printd("write retval=%d\n", nwrite);
         if (nwrite < 0) {
             err = socket_errno();
-            if (err == EAGAIN) {
+            if (err == EAGAIN || err == EINTR) {
                 nwrite = 0;
                 hlogw("try_write failed, enqueue!");
                 goto enqueue;
@@ -534,8 +537,9 @@ enqueue:
         write_queue_push_back(&io->write_queue, &remain);
         io->write_bufsize += remain.len;
         if (io->write_bufsize > WRITE_BUFSIZE_HIGH_WATER) {
-            hlogw("write len=%d enqueue %u, bufsize=%u over high water %u",
-                len, (unsigned int)(remain.len - remain.offset),
+            hlogw("write len=%u enqueue %u, bufsize=%u over high water %u",
+                (unsigned int)len,
+                (unsigned int)(remain.len - remain.offset),
                 (unsigned int)io->write_bufsize,
                 (unsigned int)WRITE_BUFSIZE_HIGH_WATER);
         }
@@ -562,7 +566,7 @@ disconnect:
 
 int hio_close (hio_t* io) {
     if (io->closed) return 0;
-    if (hv_gettid() != io->loop->tid) {
+    if (io->destroy == 0 && hv_gettid() != io->loop->tid) {
         return hio_close_async(io);
     }
 
@@ -571,7 +575,7 @@ int hio_close (hio_t* io) {
         hrecursive_mutex_unlock(&io->write_mutex);
         return 0;
     }
-    if (!write_queue_empty(&io->write_queue) && io->error == 0 && io->close == 0) {
+    if (!write_queue_empty(&io->write_queue) && io->error == 0 && io->close == 0 && io->destroy == 0) {
         io->close = 1;
         hrecursive_mutex_unlock(&io->write_mutex);
         hlogw("write_queue not empty, close later.");
@@ -596,6 +600,8 @@ int hio_close (hio_t* io) {
     SAFE_FREE(io->hostname);
     if (io->io_type & HIO_TYPE_SOCKET) {
         closesocket(io->fd);
+    } else if (io->io_type == HIO_TYPE_PIPE) {
+        close(io->fd);
     }
     return 0;
 }

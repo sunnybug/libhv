@@ -2,15 +2,19 @@
 
 # libhv
 
-[![platform](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-blue)](.github/workflows/CI.yml)
-[![CI](https://github.com/ithewei/libhv/workflows/CI/badge.svg?branch=master)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Linux](https://badgen.net/badge/Linux/success/green?icon=github)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Windows](https://badgen.net/badge/Windows/success/green?icon=github)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
+[![macOS](https://badgen.net/badge/macOS/success/green?icon=github)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Android](https://badgen.net/badge/Android/success/green?icon=github)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
+[![iOS](https://badgen.net/badge/iOS/success/green?icon=github)](https://github.com/ithewei/libhv/actions/workflows/CI.yml?query=branch%3Amaster)
 [![benchmark](https://github.com/ithewei/libhv/workflows/benchmark/badge.svg?branch=master)](https://github.com/ithewei/libhv/actions/workflows/benchmark.yml?query=branch%3Amaster)
 <br>
 [![release](https://badgen.net/github/release/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/releases)
 [![stars](https://badgen.net/github/stars/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/stargazers)
-[![forks](https://badgen.net/github/forks/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/network/members)
+[![forks](https://badgen.net/github/forks/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/forks)
 [![issues](https://badgen.net/github/issues/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/issues)
 [![PRs](https://badgen.net/github/prs/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/pulls)
+[![contributors](https://badgen.net/github/contributors/ithewei/libhv?icon=github)](https://github.com/ithewei/libhv/contributors)
 [![license](https://badgen.net/github/license/ithewei/libhv?icon=github)](LICENSE)
 <br>
 [![gitee](https://badgen.net/badge/mirror/gitee/red)](https://gitee.com/libhv/libhv)
@@ -47,16 +51,16 @@
 
 ## ✨ 特性
 
-- 跨平台（Linux, Windows, MacOS, BSD, Solaris, Android, iOS）
-- 高性能事件循环（网络IO事件、定时器事件、空闲事件、自定义事件）
+- 跨平台（Linux, Windows, macOS, Android, iOS, BSD, Solaris）
+- 高性能事件循环（网络IO事件、定时器事件、空闲事件、自定义事件、信号）
 - TCP/UDP服务端/客户端/代理
 - TCP支持心跳、重连、转发、多线程安全write和close等特性
 - 内置常见的拆包模式（固定包长、分界符、头部长度字段）
 - 可靠UDP支持: WITH_KCP
 - SSL/TLS加密通信（可选WITH_OPENSSL、WITH_GNUTLS、WITH_MBEDTLS）
 - HTTP服务端/客户端（支持https http1/x http2 grpc）
-- HTTP支持静态文件服务、目录服务、代理服务、同步/异步API处理函数
-- HTTP支持RESTful风格、URI路由、keep-alive长连接、chunked分块等特性
+- HTTP支持静态文件服务、目录服务、正向/反向代理服务、同步/异步API处理器
+- HTTP支持RESTful风格、路由、中间件、keep-alive长连接、chunked分块、SSE等特性
 - WebSocket服务端/客户端
 - MQTT客户端
 
@@ -81,12 +85,17 @@ cmake ..
 cmake --build .
 ```
 
-3、通过vcpkg:
+3、通过bazel:
+```shell
+bazel build libhv
+```
+
+4、通过vcpkg:
 ```shell
 vcpkg install libhv
 ```
 
-4、通过xmake:
+5、通过xmake:
 ```shell
 xrepo install libhv
 ```
@@ -272,8 +281,7 @@ int main() {
         return ctx->send(ctx->body(), ctx->type());
     });
 
-    HttpServer server;
-    server.registerHttpService(&router);
+    HttpServer server(&router);
     server.setPort(8080);
     server.setThreadNum(4);
     server.run();
@@ -283,9 +291,9 @@ int main() {
 
 **注意**:
 
-上面示例直接运行在`main`主线程，`server.run()`会阻塞当前线程运行，所以`router`和`server`对象不会被析构，
-如使用`server.start()`内部会另起线程运行，不会阻塞当前线程，但需要注意`router`和`server`的生命周期，
-不要定义为局部变量被析构了，可定义为类成员变量或者全局变量，下面的`WebSocket`服务同理。
+上面示例直接运行在`main`主线程，`server.run()`会阻塞当前线程运行，所以`router`和`server`对象不会被析构，<br>
+如使用`server.start()`内部会另起线程运行，不会阻塞当前线程，但需要注意`router`和`server`的生命周期，<br>
+不要定义为局部变量被析构了，可定义为类成员变量或者全局变量，下面的`WebSocket`服务同理。<br>
 
 #### HTTP客户端
 见[examples/http_client_test.cpp](examples/http_client_test.cpp)
@@ -313,6 +321,13 @@ int main() {
 }
 ```
 
+附HTTP相关接口文档:
+
+- [class HttpMessage](docs/cn/HttpMessage.md)
+- [class HttpClient](docs/cn/HttpClient.md)
+- [class HttpServer](docs/cn/HttpServer.md)
+- [class HttpContext](docs/cn/HttpContext.md)
+
 ### WebSocket
 #### WebSocket服务端
 见[examples/websocket_server_test.cpp](examples/websocket_server_test.cpp)
@@ -332,8 +347,7 @@ int main(int argc, char** argv) {
         printf("onclose\n");
     };
 
-    WebSocketServer server;
-    server.registerWebSocketService(&ws);
+    WebSocketServer server(&ws);
     server.setPort(9999);
     server.setThreadNum(4);
     server.run();
@@ -388,6 +402,7 @@ int main(int argc, char** argv) {
 ### c版本
 - 事件循环:     [examples/hloop_test.c](examples/hloop_test.c)
 - 定时器:       [examples/htimer_test.c](examples/htimer_test.c)
+- pipe示例:     [examples/pipe_test.c](examples/pipe_test.c)
 - TCP回显服务:  [examples/tcp_echo_server.c](examples/tcp_echo_server.c)
 - TCP聊天服务:  [examples/tcp_chat_server.c](examples/tcp_chat_server.c)
 - TCP代理服务:  [examples/tcp_proxy_server.c](examples/tcp_proxy_server.c)
@@ -426,6 +441,7 @@ int main(int argc, char** argv) {
 - URL请求工具:  [examples/curl](examples/curl.cpp)
 - 文件下载工具: [examples/wget](examples/wget.cpp)
 - 服务注册与发现: [examples/consul](examples/consul)
+- kcptun隧道: [examples/kcptun](examples/kcptun)
 
 ## 🥇 性能测试
 

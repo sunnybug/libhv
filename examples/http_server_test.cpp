@@ -5,7 +5,10 @@
  */
 
 #include "HttpServer.h"
-#include "hssl.h"
+#include "hthread.h"    // import hv_gettid
+#include "hasync.h"     // import hv::async
+
+using namespace hv;
 
 /*
  * #define TEST_HTTPS 1
@@ -33,12 +36,20 @@ int main(int argc, char** argv) {
 
     HttpService router;
 
+    /* Static file service */
     // curl -v http://ip:port/
     router.Static("/", "./html");
 
-    // curl -v http://ip:port/proxy/get
-    router.Proxy("/proxy/", "http://httpbin.org/");
+    /* Forward proxy service */
+    router.EnableForwardProxy();
+    // curl -v http://httpbin.org/get --proxy http://127.0.0.1:8080
+    router.AddTrustProxy("*httpbin.org");
 
+    /* Reverse proxy service */
+    // curl -v http://ip:port/httpbin/get
+    router.Proxy("/httpbin/", "http://httpbin.org/");
+
+    /* API handlers */
     // curl -v http://ip:port/ping
     router.GET("/ping", [](HttpRequest* req, HttpResponse* resp) {
         return resp->String("pong");
@@ -56,12 +67,13 @@ int main(int argc, char** argv) {
     });
 
     // curl -v http://ip:port/get?env=1
-    router.GET("/get", [](HttpRequest* req, HttpResponse* resp) {
-        resp->json["origin"] = req->client_addr.ip;
-        resp->json["url"] = req->url;
-        resp->json["args"] = req->query_params;
-        resp->json["headers"] = req->headers;
-        return 200;
+    router.GET("/get", [](const HttpContextPtr& ctx) {
+        hv::Json resp;
+        resp["origin"] = ctx->ip();
+        resp["url"] = ctx->url();
+        resp["args"] = ctx->params();
+        resp["headers"] = ctx->headers();
+        return ctx->send(resp.dump(2));
     });
 
     // curl -v http://ip:port/echo -d "hello,world!"
@@ -76,31 +88,47 @@ int main(int argc, char** argv) {
         return ctx->send(resp.dump(2));
     });
 
-    http_server_t server;
+    // curl -v http://ip:port/async
+    router.GET("/async", [](const HttpRequestPtr& req, const HttpResponseWriterPtr& writer) {
+        writer->Begin();
+        writer->WriteHeader("X-Response-tid", hv_gettid());
+        writer->WriteHeader("Content-Type", "text/plain");
+        writer->WriteBody("This is an async response.\n");
+        writer->End();
+    });
+
+    // middleware
+    router.AllowCORS();
+    router.Use([](HttpRequest* req, HttpResponse* resp) {
+        resp->SetHeader("X-Request-tid", hv::to_string(hv_gettid()));
+        return HTTP_STATUS_NEXT;
+    });
+
+    HttpServer server;
     server.service = &router;
     server.port = port;
 #if TEST_HTTPS
     server.https_port = 8443;
-    hssl_ctx_init_param_t param;
+    hssl_ctx_opt_t param;
     memset(&param, 0, sizeof(param));
     param.crt_file = "cert/server.crt";
     param.key_file = "cert/server.key";
     param.endpoint = HSSL_SERVER;
-    if (hssl_ctx_init(&param) == NULL) {
-        fprintf(stderr, "hssl_ctx_init failed!\n");
+    if (server.newSslCtx(&param) != 0) {
+        fprintf(stderr, "new SSL_CTX failed!\n");
         return -20;
     }
 #endif
 
     // uncomment to test multi-processes
-    // server.worker_processes = 4;
+    // server.setProcessNum(4);
     // uncomment to test multi-threads
-    // server.worker_threads = 4;
+    // server.setThreadNum(4);
 
-    http_server_run(&server, 0);
+    server.start();
 
     // press Enter to stop
     while (getchar() != '\n');
-    http_server_stop(&server);
+    hv::async::cleanup();
     return 0;
 }

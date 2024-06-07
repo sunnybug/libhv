@@ -88,8 +88,8 @@ public:
 
     // Timer interfaces: setTimer, killTimer, resetTimer
     TimerID setTimer(int timeout_ms, TimerCallback cb, uint32_t repeat = INFINITE, TimerID timerID = INVALID_TIMER_ID) {
-        assertInLoopThread();
         if (loop_ == NULL) return INVALID_TIMER_ID;
+        assertInLoopThread();
         htimer_t* htimer = htimer_add(loop_, onTimer, timeout_ms, repeat);
         assert(htimer != NULL);
         if (timerID == INVALID_TIMER_ID) {
@@ -176,7 +176,7 @@ public:
     void postEvent(EventCallback cb) {
         if (loop_ == NULL) return;
 
-        EventPtr ev(new Event(cb));
+        EventPtr ev = std::make_shared<Event>(cb);
         hevent_set_userdata(&ev->event, this);
         ev->event.cb = onCustomEvent;
 

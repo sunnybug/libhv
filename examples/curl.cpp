@@ -7,7 +7,7 @@
  *         bin/curl -v 127.0.0.1:8080/echo -d 'hello,world!'
  */
 
-#include "http_client.h"
+#include "HttpClient.h"
 #include "hurl.h"
 
 #ifdef _MSC_VER
@@ -226,15 +226,15 @@ static int parse_cmdline(int argc, char* argv[], HttpRequest* req) {
         }
     }
 
-    // --http2
-    if (http_version == 2) {
-        req->http_major = 2;
-        req->http_minor = 0;
-    }
     // --grpc
     if (grpc) {
         http_version = 2;
         req->content_type = APPLICATION_GRPC;
+    }
+    // --http2
+    if (http_version == 2) {
+        req->http_major = 2;
+        req->http_minor = 0;
     }
     // --timeout
     if (timeout > 0) {
@@ -263,7 +263,7 @@ int main(int argc, char* argv[]) {
             req.method = HTTP_POST;
         }
     }
-    req.url = HUrl::escapeUrl(url);
+    req.url = hv::escapeURL(url);
     req.http_cb = [](HttpMessage* res, http_parser_state state, const char* data, size_t size) {
         if (state == HP_HEADERS_COMPLETE) {
             if (verbose) {

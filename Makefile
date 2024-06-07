@@ -52,7 +52,7 @@ default: all
 all: libhv examples
 	@echo "make all done, please enjoy libhv."
 
-examples: hmain_test htimer_test hloop_test \
+examples: hmain_test htimer_test hloop_test pipe_test \
 	nc nmap tinyhttpd tinyproxyd httpd curl wget wrk consul \
 	tcp_client_test \
 	tcp_echo_server \
@@ -111,6 +111,9 @@ htimer_test: prepare
 hloop_test: prepare
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS)" SRCS="examples/hloop_test.c"
 
+pipe_test: prepare
+	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS)" SRCS="examples/pipe_test.c"
+
 tcp_client_test: prepare
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS)" SRCS="examples/tcp_client_test.c"
 
@@ -150,7 +153,7 @@ tinyhttpd: prepare
 tinyproxyd: prepare
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS)" SRCS="examples/tinyproxyd.c"
 
-nmap: prepare
+nmap: prepare libhv
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) cpputil examples/nmap" DEFINES="PRINT_DEBUG"
 
 wrk: prepare
@@ -160,7 +163,7 @@ httpd: prepare
 	$(RM) examples/httpd/*.o
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) util cpputil evpp http http/client http/server examples/httpd"
 
-consul: prepare
+consul: prepare libhv
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) util cpputil evpp http http/client examples/consul" DEFINES="PRINT_DEBUG"
 
 curl: prepare
@@ -190,6 +193,14 @@ mqtt_pub: prepare
 
 mqtt_client_test: prepare
 	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) mqtt" SRCS="examples/mqtt/mqtt_client_test.cpp"
+
+kcptun: kcptun_client kcptun_server
+
+kcptun_client: prepare
+	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) examples/kcptun/smux examples/kcptun/client"
+
+kcptun_server: prepare
+	$(MAKEF) TARGET=$@ SRCDIRS="$(CORE_SRCDIRS) examples/kcptun/smux examples/kcptun/server"
 
 jsonrpc: jsonrpc_client jsonrpc_server
 

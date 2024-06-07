@@ -88,6 +88,18 @@ std::string HUrl::unescape(const std::string& str) {
     return ostr;
 }
 
+void HUrl::reset() {
+    url.clear();
+    scheme.clear();
+    username.clear();
+    password.clear();
+    host.clear();
+    port = 0;
+    path.clear();
+    query.clear();
+    fragment.clear();
+}
+
 bool HUrl::parse(const std::string& url) {
     reset();
     this->url = url;
@@ -169,4 +181,26 @@ const std::string& HUrl::dump() {
         url += fragment;
     }
     return url;
+}
+
+namespace hv {
+
+std::string escapeHTML(const std::string& str)  {
+    std::string ostr;
+    const char* p = str.c_str();
+    while (*p != '\0') {
+        switch (*p) {
+            case '<':   ostr += "&lt;";     break;
+            case '>':   ostr += "&gt;";     break;
+            case '&':   ostr += "&amp;";    break;
+            case '\"':  ostr += "&quot;";   break;
+            case '\'':  ostr += "&apos;";   break;
+         // case ' ':   ostr += "&nbsp;";   break;
+            default:    ostr += *p;         break;
+        }
+        ++p;
+    }
+    return ostr;
+}
+
 }

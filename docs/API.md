@@ -107,6 +107,7 @@
 - hv_strstartswith
 - hv_strendswith
 - hv_strcontains
+- hv_wildcard_match
 - hv_strnchr
 - hv_strrchr_dot
 - hv_strrchr_dir
@@ -227,8 +228,14 @@
 - tcp_nopush
 - tcp_keepalive
 - udp_broadcast
+- ip_v6only
 - so_sndtimeo
 - so_rcvtimeo
+- so_sndbuf
+- so_rcvbuf
+- so_reuseaddr
+- so_reuseport
+- so_linger
 
 ### hlog.h
 - default_logger
@@ -262,6 +269,7 @@
 - main_ctx_init
 - parse_opt
 - parse_opt_long
+- dump_opt_long
 - get_arg
 - get_env
 - setproctitle
@@ -463,6 +471,7 @@
 - hio_setup_ssl_upstream
 - hio_setup_udp_upstream
 - hio_create_socket
+- hio_create_pipe
 - hio_context
 - hio_set_context
 - htimer_add
@@ -471,6 +480,8 @@
 - htimer_reset
 - hidle_add
 - hidle_del
+- hsignal_add
+- hsignal_del
 
 ### nlog.h
 - network_logger
@@ -541,7 +552,6 @@
 - class HttpRequest
 - class HttpResponse
 - class HttpParser
-- class HttpService
 
 ### httpdef.h
 - http_content_type_enum
@@ -564,7 +574,7 @@
 - dump_json
 - dump_multipart
 
-### http_client.h
+### HttpClient.h
 - http_client_new
 - http_client_del
 - http_client_send
@@ -603,6 +613,7 @@
 ### HttpServer.h
 - http_server_run
 - http_server_stop
+- class HttpService
 - class HttpServer
 
 ### WebSocketClient.h
@@ -611,6 +622,7 @@
 ### WebSocketServer.h
 - websocket_server_run
 - websocket_server_stop
+- class WebSocketService
 - class WebSocketServer
 
 ## mqtt

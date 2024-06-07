@@ -4,6 +4,7 @@
  * @build   make examples
  * @server  bin/websocket_server_test 9999
  * @client  bin/websocket_client_test ws://127.0.0.1:9999/
+ * @python  scripts/websocket_server.py
  * @js      html/websocket_client.html
  *
  */
@@ -11,7 +12,8 @@
 #include "WebSocketServer.h"
 #include "EventLoop.h"
 #include "htime.h"
-#include "hssl.h"
+
+using namespace hv;
 
 /*
  * #define TEST_WSS 1
@@ -60,6 +62,7 @@ int main(int argc, char** argv) {
     });
 
     WebSocketService ws;
+    // ws.setPingInterval(10000);
     ws.onopen = [](const WebSocketChannelPtr& channel, const HttpRequestPtr& req) {
         printf("onopen: GET %s\n", req->Path().c_str());
         auto ctx = channel->newContextPtr<MyContext>();
@@ -87,26 +90,26 @@ int main(int argc, char** argv) {
         // channel->deleteContextPtr();
     };
 
-    websocket_server_t server;
+    WebSocketServer server;
     server.port = port;
 #if TEST_WSS
     server.https_port = port + 1;
-    hssl_ctx_init_param_t param;
+    hssl_ctx_opt_t param;
     memset(&param, 0, sizeof(param));
     param.crt_file = "cert/server.crt";
     param.key_file = "cert/server.key";
     param.endpoint = HSSL_SERVER;
-    if (hssl_ctx_init(&param) == NULL) {
-        fprintf(stderr, "hssl_ctx_init failed!\n");
+    if (server.newSslCtx(&param) != 0) {
+        fprintf(stderr, "new SSL_CTX failed!\n");
         return -20;
     }
 #endif
-    server.service = &http;
-    server.ws = &ws;
-    websocket_server_run(&server, 0);
+    server.registerHttpService(&http);
+    server.registerWebSocketService(&ws);
+
+    server.start();
 
     // press Enter to stop
     while (getchar() != '\n');
-    websocket_server_stop(&server);
     return 0;
 }
